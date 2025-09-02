@@ -1,3 +1,6 @@
+// cms/schemaTypes/blockContent.js
+// Schéma blockContent mis à jour avec support YouTube ET Instagram
+
 import {defineType, defineArrayMember} from 'sanity'
 
 /**
@@ -30,16 +33,20 @@ export default defineType({
         {title: 'H4', value: 'h4'},
         {title: 'Quote', value: 'blockquote'},
       ],
-      lists: [{title: 'Bullet', value: 'bullet'}],
+      lists: [
+        {title: 'Bullet', value: 'bullet'},
+        {title: 'Numbered', value: 'number'}
+      ],
       // Marks let you mark up inline text in the block editor.
       marks: {
-        // Decorators usually describe a single property – e.g. a typographic
+        // Decorators usually describe a single property — e.g. a typographic
         // preference or highlighting by editors.
         decorators: [
           {title: 'Strong', value: 'strong'},
           {title: 'Emphasis', value: 'em'},
+          {title: 'Code', value: 'code'}
         ],
-        // Annotations can be any object structure – e.g. a link or a footnote.
+        // Annotations can be any object structure — e.g. a link or a footnote.
         annotations: [
           {
             title: 'URL',
@@ -50,7 +57,16 @@ export default defineType({
                 title: 'URL',
                 name: 'href',
                 type: 'url',
+                validation: Rule => Rule.uri({
+                  scheme: ['http', 'https', 'mailto', 'tel']
+                })
               },
+              {
+                title: 'Ouvrir dans un nouvel onglet',
+                name: 'blank',
+                type: 'boolean',
+                initialValue: true
+              }
             ],
           },
         ],
@@ -62,6 +78,87 @@ export default defineType({
     defineArrayMember({
       type: 'image',
       options: {hotspot: true},
+      fields: [
+        {
+          name: 'caption',
+          type: 'string',
+          title: 'Légende',
+        },
+        {
+          name: 'alt',
+          type: 'string',
+          title: 'Texte alternatif',
+          description: 'Important pour le SEO et l\'accessibilité'
+        }
+      ]
     }),
+    // EXISTANT : Bloc pour intégrer un post Instagram
+    defineArrayMember({
+      name: 'instagram',
+      type: 'object',
+      title: 'Post Instagram',
+      fields: [
+        {
+          name: 'url',
+          type: 'url',
+          title: 'URL du post Instagram',
+          description: 'Collez l\'URL complète du post Instagram (ex: https://www.instagram.com/p/ABC123/)',
+          validation: Rule => Rule.required()
+            .uri({
+              scheme: ['http', 'https']
+            })
+            .custom(url => {
+              if (!url || !url.includes('instagram.com')) {
+                return 'L\'URL doit être un lien Instagram valide'
+              }
+              return true
+            })
+        },
+        {
+          name: 'caption',
+          type: 'string',
+          title: 'Légende (optionnel)',
+          description: 'Une description alternative si le post ne se charge pas'
+        }
+      ],
+      preview: {
+        select: {
+          url: 'url',
+          caption: 'caption'
+        },
+        prepare({url, caption}) {
+          // Extrait l'ID du post de l'URL
+          const postId = url ? url.split('/p/')[1]?.split('/')[0] : null
+          return {
+            title: caption || 'Post Instagram',
+            subtitle: postId ? `Post: ${postId}` : 'Ajoutez une URL',
+            media: () => '📷' // Emoji comme icône
+          }
+        }
+      }
+    }),
+    // NOUVEAU : Bloc pour intégrer une vidéo YouTube
+    defineArrayMember({
+      type: 'youtube',
+      title: 'Vidéo YouTube'
+    }),
+    // OPTIONNEL : Bloc de code avec coloration syntaxique
+    defineArrayMember({
+      type: 'code',
+      title: 'Bloc de code',
+      options: {
+        language: 'javascript',
+        languageAlternatives: [
+          {title: 'JavaScript', value: 'javascript'},
+          {title: 'TypeScript', value: 'typescript'},
+          {title: 'HTML', value: 'html'},
+          {title: 'CSS', value: 'css'},
+          {title: 'Python', value: 'python'},
+          {title: 'PHP', value: 'php'},
+          {title: 'JSON', value: 'json'},
+          {title: 'Bash', value: 'bash'}
+        ]
+      }
+    })
   ],
 })
